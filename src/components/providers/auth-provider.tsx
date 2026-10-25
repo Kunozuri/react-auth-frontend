@@ -39,23 +39,28 @@ import { createContext, useContext, useEffect, useState } from "react";
 import {
     getMe,
     signIn as signInRequest,
+    signUp as signUpRequest,
     signOut as signOutRequest,
 } from "@/lib/api/auth";
 
 // Type-only imports (erased at runtime, only used by TypeScript).
-import type { SignInInput, User } from "@/types/auth";
+import type { SignInInput, SignUpInput, User } from "@/types/auth";
 
 
 // ----------------------------------------------------------------------------
 // AuthState - the list of things this "channel" carries
 // ----------------------------------------------------------------------------
-// Any component that calls useAuth() receives an object with exactly these four.
+// Any component that calls useAuth() receives an object with exactly these five.
 type AuthState = {
     // The logged-in user, or null when nobody is logged in (or we don't know yet).
     user: User | null;
 
     // true while we are still finding out who the visitor is.
     loading: boolean;
+
+    // Create an account. The backend signs the new user in right away, so the
+    // result lands in `user`, just like signIn.
+    signUp: (input: SignUpInput) => Promise<void>;
 
     // Log in. `(input) => Promise<void>` means: takes email+password, runs
     // async, and gives back nothing useful (the result lands in `user`).
@@ -115,6 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // error travels up to the catch in auth-form.tsx, which displays it.
     }
 
+    async function signUp(input: SignUpInput) {
+        await signUpRequest(input); // Express creates the account and signs them in
+        setUser(await getMe());     // same pattern as signIn: one known shape
+    }
+
     // signOut - tell Express to clear the cookies, then forget the user locally
     async function signOut() {
         await signOutRequest(); // Express clears the cookies
@@ -125,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // calls useAuth() receives this object. Whenever `user` or `loading` change,
     // those components re-render automatically with the new values.
     return (
-        <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+        <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
             {children}
         </AuthContext.Provider>
     );

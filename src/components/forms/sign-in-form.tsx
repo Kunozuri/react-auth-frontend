@@ -4,7 +4,15 @@
 //
 // Save this as: src/components/forms/sign-in-form.tsx
 //
-// WHAT CHANGED COMPARED TO THE PREVIOUS VERSION
+// WHAT CHANGED IN THIS VERSION
+//   - The password box got a show/hide eye. It is written directly in this file
+//     (no separate component), so this form stays self-contained.
+//   - The password box is now a wrapper that draws the border, with the real
+//     <input> and the eye side by side INSIDE it, so the eye can't end up
+//     outside the box.
+//   - Nothing else changed. The logic is identical.
+//
+// WHAT CHANGED COMPARED TO THE VERSION BEFORE THAT
 //   - Only the DESIGN changed (the JSX at the bottom). The logic is identical.
 //   - The design came from Meraki UI as plain HTML, so it was converted to JSX:
 //       class      -> className
@@ -48,6 +56,14 @@ export default function SignInForm() {
     const [error, setError] = useState("");
     const [pending, setPending] = useState(false);
 
+    // true = the password is shown as plain text, false = shown as dots.
+    // Clicking the eye flips it.
+    const [showPassword, setShowPassword] = useState(false);
+
+    // true while the cursor is in the password box (or on the eye). The blue
+    // glow has to be drawn on the WRAPPER, because the wrapper is the visible box.
+    const [passwordFocused, setPasswordFocused] = useState(false);
+
 
     // ------------------------------------------------------------------------
     // handleSubmit - the LOGIC. Unchanged by the redesign.
@@ -78,11 +94,12 @@ export default function SignInForm() {
     // ------------------------------------------------------------------------
     // Styling
     // ------------------------------------------------------------------------
-    // Both inputs share the same long class list, so it's stored once here
-    // (Meraki's HTML repeated it). `dark:` classes apply automatically when the
-    // visitor's device is in dark mode.
+    // The email input uses this class list (Meraki's HTML repeated it on every
+    // input, so it's stored once here). `dark:` classes apply automatically when
+    // the visitor's device is in dark mode.
     // `dark:text-gray-300` was ADDED: the original had no text colour for dark
     // mode, so typed text would be dark grey on a dark background.
+    // The password box does NOT use it: it draws its own box (see below).
     const field =
         "mt-2 block w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-700 placeholder-gray-500 focus:border-blue-400 focus:ring-3 focus:ring-blue-300/40 focus:outline-hidden dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-400 dark:focus:border-blue-300";
 
@@ -133,15 +150,110 @@ export default function SignInForm() {
                             />
                         </div>
 
+                        {/* THE PASSWORD BOX WITH THE EYE.
+                            The outer <div> IS the visible box (border, rounded
+                            corners, glow). Inside it, the <input> and the eye
+                            button sit side by side, so the eye is always inside.
+                            React's onFocus/onBlur also fire for focus changes
+                            INSIDE this div, which is what lights up the glow. */}
                         <div className="mt-4 w-full">
-                            <input
-                                name="password"
-                                type="password"
-                                required
-                                placeholder="Password"
-                                aria-label="Password"
-                                className={field}
-                            />
+                            <div
+                                onFocus={() => setPasswordFocused(true)}
+                                onBlur={() => setPasswordFocused(false)}
+                                className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800"
+                                style={
+                                    passwordFocused
+                                        ? {
+                                            borderColor: "#60a5fa",
+                                            boxShadow: "0 0 0 3px rgb(147 197 253 / 0.4)",
+                                        }
+                                        : undefined
+                                }
+                            >
+                                {/* type flips between "password" (dots) and "text"
+                                    (readable). The typed value stays the same.
+                                    "current-password" tells the browser this is the
+                                    password of an EXISTING account, so password
+                                    managers can offer to fill it in.
+                                    The inline style gives the input its own padding
+                                    and a see-through background (the wrapper draws
+                                    the box), and minWidth:0 lets it shrink so the
+                                    eye always has room. */}
+                                <input
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    required
+                                    placeholder="Password"
+                                    aria-label="Password"
+                                    autoComplete="current-password"
+                                    className="w-full py-2 text-gray-700 placeholder-gray-500 focus:outline-hidden dark:text-gray-300 dark:placeholder-gray-400"
+                                    style={{
+                                        minWidth: 0,
+                                        background: "transparent",
+                                        paddingLeft: "1rem",
+                                        paddingRight: "0.5rem",
+                                    }}
+                                />
+
+                                {/* type="button" is IMPORTANT: a button inside a form
+                                    submits it by default, so without it clicking the
+                                    eye would try to log in.
+                                    alignSelf:"stretch" makes the clickable area as
+                                    tall as the box. */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((v) => !v)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    aria-pressed={showPassword}
+                                    className="flex items-center text-gray-500 hover:text-gray-700 focus-visible:text-blue-500 focus:outline-hidden dark:text-gray-400 dark:hover:text-gray-200"
+                                    style={{ alignSelf: "stretch", padding: "0 0.75rem" }}
+                                >
+                                    {/* width/height are set directly on the <svg>. Without
+                                        a size, an inline SVG stretches to fill the space. */}
+                                    {showPassword ? (
+                                        // Eye with a slash: "click to hide"
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            width={20}
+                                            height={20}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth={1.5}
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+                                            />
+                                        </svg>
+                                    ) : (
+                                        // Open eye: "click to show"
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            width={20}
+                                            height={20}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth={1.5}
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                                            />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                            />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         {/* ADDED: only shown when `error` isn't an empty string. */}

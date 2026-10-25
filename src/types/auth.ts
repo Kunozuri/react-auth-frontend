@@ -66,6 +66,12 @@ export type SignInInput = {
 //
 // Reusing SignInInput just saves us from repeating email and password. If you
 // later add a rule to SignInInput, SignUpInput gets it automatically.
-export type SignUpInput = SignInInput & {
-    name: string;
+export type SignUpInput = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    country?: string;
+    acceptedTerms: boolean; // must be the boolean true, not "true" or 1
 };
