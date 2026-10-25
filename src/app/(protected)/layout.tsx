@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 
 // Wraps every page inside (protected). It acts as the bouncer:
 // once we know there is no user, send the visitor to /sign-in.
